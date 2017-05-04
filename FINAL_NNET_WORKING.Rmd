@@ -1,0 +1,188 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+rm(list = ls())
+```
+
+```{r}
+#define functions and libraries
+library(data.table)
+library(neuralnet)
+library(pROC)
+library(nnet)
+library(reshape)
+library(chemometrics)
+library(devtools)
+source_url('https://gist.githubusercontent.com/fawda123/7471137/raw/466c1474d0a505ff044412703516c34f1a4684a5/nnet_plot_update.r')
+ 
+# scalezero <- function(column){
+#   columnz <- ((column*100)/max(column))/100
+#   return(columnz)
+# }
+```
+
+```{r}
+data <- fread('/Volumes/200GB/Big Data Outputs/final sentiment code/neuralnetinput.csv', sep =',')
+```
+
+```{r}
+data <- as.data.frame(data)
+class(data)
+
+for (i in seq(1,length(data))){
+  colnames(data)[i] <- gsub(' ','',colnames(data)[i])
+  colnames(data)[i] <- gsub('/','_',colnames(data)[i])
+  colnames(data)[i] <- gsub('-','_',colnames(data)[i])
+  colnames(data)[i] <- gsub('!','',colnames(data)[i])
+}
+
+str(data)
+data[,c(13,84)]
+```
+
+```{r}
+subset(data[,c(13,84)], is.na(ROI_RATING))
+```
+
+```{r}
+data$ROI_RATING <- as.factor(data$ROI_RATING)
+str(data)
+```
+
+```{r}
+unique(data$ROI_RATING)
+length(data$ROI_RATING)
+length(na.omit(data$ROI_RATING))
+nrow(data)
+nrow(na.omit(data))
+```
+
+```{r}
+data <- data[,c(-30)]
+names(data)
+```
+
+```{r}
+data2 <- data
+unique(data2$ROI_RATING)
+data2$ROI_RATING <- as.factor(as.character(data2$ROI_RATING))
+unique(data2$ROI_RATING)
+```
+
+
+
+```{r}
+names(data2)
+```
+
+
+
+```{r}
+indexes = sample(1:nrow(data2), size=0.2*nrow(data2))
+train <- data2[-indexes,]
+test<- data2[indexes,]
+train.title <- train[,1]
+test.title <- test[,1]
+
+train <- train[,c(2:12,14:ncol(train))]
+test <- test[,c(2:12,14:ncol(test))]
+
+train$ROI_RATING <- class.ind(train$ROI_RATING)
+test$ROI_RATING <- class.ind(test$ROI_RATING)
+
+```
+
+```{r}
+unique(train$ROI_RATING)
+```
+
+```{r}
+#get formula
+n <- names(train)
+f <- as.formula(paste("ROI_RATING ~", paste(n[!(n %in% "ROI_RATING")], collapse = " + ")))
+f
+n.input <- train[n[!(n %in% "ROI_RATING")]]
+n.output <- as.data.frame(train$ROI_RATING)
+class(n.input)
+class(n.output)
+```
+
+```{r}
+# #train the neural network using neuralnet
+#nn.neuralnet <- neuralnet(f, data = train, hidden = 40,linear.output = F)
+```
+
+```{r}
+#nn.nnet <- nnet(n.input, n.output, data = train, size = 40,MaxNWts = 11000)
+nn.nnet <- multinom(f, data = train)
+
+```
+
+```{r}
+names(nn.nnet)
+```
+```{r}
+plot.nnet(nn.nnet, struct= struct)
+```
+
+```{r}
+names(test)
+```
+
+```{r}
+predicted.results <- predict(nn.nnet,test[,c(1:80)])
+```
+
+```{r}
+predicted.results <- as.data.frame(predicted.results)
+```
+
+
+
+```{r}
+cleanoutput <- test
+```
+
+```{r}
+names(cleanoutput)
+```
+
+```{r}
+#colnames(cleanoutput)[145] <- "Expected ROI"
+cleanoutput<- cbind(cleanoutput,predicted.results)
+names(cleanoutput)
+```
+
+```{r}
+finalresults <- cbind(test.title,cleanoutput)
+```
+
+```{r}
+names(finalresults)
+```
+
+```{r}
+finalresults.end <- finalresults[,c(1,82:83)]
+```
+```{r}
+str(finalresults.end)
+```
+
+```{r}
+class(finalresults.end)
+write.csv(finalresults.end, file = 'nnetresults.csv', na = "NA", row.names = FALSE)
+```
+
+```{r}
+results <- fread('nnetresults-2.csv',sep =',')
+```
+```{r}
+str(results)
+```
+
+```{r}
+library(caret)
+confusionMatrix(results$predicted.results,results$ROI_RATING)
+```

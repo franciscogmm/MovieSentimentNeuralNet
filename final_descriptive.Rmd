@@ -1,0 +1,471 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(data.table)
+```
+
+```{r}
+sentimentdata <- fread('/Volumes/200GB/Big Data Outputs/final sentiment code/finalsentimentpermovie.csv', sep = ',')
+```
+
+```{r}
+#row.names(sentimentdata) <-sentimentdata$Movie
+sentimentdata <- as.data.frame(sentimentdata[,c(2,3,4)])
+
+head(sentimentdata)
+```
+```{r}
+sentimentdata$Movie <- gsub('.csv','', sentimentdata$Movie)
+sentimentdata$Movie <- gsub(' 2005','', sentimentdata$Movie)
+sentimentdata$Movie <- gsub(' 2006','', sentimentdata$Movie)
+sentimentdata$Movie <- gsub(' 2007','', sentimentdata$Movie)
+sentimentdata$Movie <- gsub(' 2008','', sentimentdata$Movie)
+sentimentdata$Movie <- gsub(' 2009','', sentimentdata$Movie)
+sentimentdata$Movie <- gsub(' 2010','', sentimentdata$Movie)
+sentimentdata$Movie <- gsub(' 2011','', sentimentdata$Movie)
+sentimentdata$Movie <- gsub(' 2012','', sentimentdata$Movie)
+sentimentdata$Movie <- gsub(' 2013','', sentimentdata$Movie)
+sentimentdata$Movie <- gsub(' 2014','', sentimentdata$Movie)
+sentimentdata$Movie <- gsub(' 2015','', sentimentdata$Movie)
+sentimentdata$Movie <- gsub(' 2016','', sentimentdata$Movie)
+```
+
+```{r}
+head(sentimentdata)
+```
+
+```{r}
+boxoffice <- fread('comments_group.csv', sep =',')
+```
+
+```{r}
+colnames(boxoffice) <- c('V1','Movie','compound','neg','neu','pos')
+head(boxoffice)
+```
+
+```{r}
+dataset <- merge(sentimentdata, boxoffice, by = 'Movie', all.x = T)
+```
+
+```{r}
+dataset
+```
+
+```{r}
+dataset.title <- dataset$Movie
+dataset.scaled <- dataset[,c(2,3,5:8)]
+```
+
+```{r}
+dataset.scaled <- cbind(dataset.title,dataset.scaled)
+head(dataset.scaled)
+```
+
+
+```{r}
+full <- fread('full.csv',sep =',')
+```
+
+```{r}
+head(full)
+```
+
+```{r}
+FINAL <- merge(full,dataset.scaled,by.x = 'movie_title',by.y = 'dataset.title', all.x = T)
+```
+
+```{r}
+head(FINAL)
+```
+
+```{r}
+str(FINAL)
+names(FINAL)
+```
+
+```{r}
+#write.csv(FINAL, file = 'FULLDATASET.csv', na = "NA", row.names = F)
+```
+CHECKPOINT
+```{r}
+#FINAL.title <- as.data.frame(FINAL$movie_title)
+FINAL.matrix <- FINAL[,c(1:5,8:23)]
+```
+
+```{r}
+FINAL.matrix$`Production Budget` <- gsub('\\$','',FINAL.matrix$`Production Budget`)
+FINAL.matrix$`Production Budget` <- gsub(',','',FINAL.matrix$`Production Budget`)
+
+FINAL.matrix$`Domestic Gross` <- gsub('\\$','',FINAL.matrix$`Domestic Gross`)
+FINAL.matrix$`Domestic Gross` <- gsub(',','',FINAL.matrix$`Domestic Gross`)
+
+FINAL.matrix$`International Gross` <- gsub('\\$','',FINAL.matrix$`International Gross`)
+FINAL.matrix$`International Gross` <- gsub(',','',FINAL.matrix$`International Gross`)
+
+FINAL.matrix$`WorldWide Gross` <- gsub('\\$','',FINAL.matrix$`WorldWide Gross`)
+FINAL.matrix$`WorldWide Gross` <- gsub(',','',FINAL.matrix$`WorldWide Gross`)
+
+FINAL.matrix$`Domestic Blu-Ray Sales` <- gsub('\\$','',FINAL.matrix$`Domestic Blu-Ray Sales`)
+FINAL.matrix$`Domestic Blu-Ray Sales` <- gsub(',','',FINAL.matrix$`Domestic Blu-Ray Sales`)
+
+FINAL.matrix$`Domestic DVD Sales` <- gsub('\\$','',FINAL.matrix$`Domestic DVD Sales`)
+FINAL.matrix$`Domestic DVD Sales` <- gsub(',','',FINAL.matrix$`Domestic DVD Sales`)
+
+FINAL.matrix$`Total Domestic Video Sales` <- gsub('\\$','',FINAL.matrix$`Total Domestic Video Sales`)
+FINAL.matrix$`Total Domestic Video Sales` <- gsub(',','',FINAL.matrix$`Total Domestic Video Sales`)
+
+FINAL.matrix$`Production Budget` <- as.numeric(as.character(FINAL.matrix$`Production Budget`))
+FINAL.matrix$`Domestic Gross` <- as.numeric(as.character(FINAL.matrix$`Domestic Gross`))
+FINAL.matrix$`International Gross` <- as.numeric(as.character(FINAL.matrix$`International Gross`))
+FINAL.matrix$`WorldWide Gross` <- as.numeric(as.character(FINAL.matrix$`WorldWide Gross`))
+FINAL.matrix$`Domestic Blu-Ray Sales` <- as.numeric(as.character(FINAL.matrix$`Domestic Blu-Ray Sales`))
+FINAL.matrix$`Domestic DVD Sales` <- as.numeric(as.character(FINAL.matrix$`Domestic DVD Sales`))
+FINAL.matrix$`Total Domestic Video Sales` <- as.numeric(as.character(FINAL.matrix$`Total Domestic Video Sales`))
+FINAL.noNA <- na.omit(FINAL.matrix)
+FINAL.noNA$ROI <- (FINAL.noNA$`WorldWide Gross`-FINAL.noNA$`Production Budget`)/FINAL.noNA$`Production Budget`
+```
+
+```{r}
+head(FINAL.noNA)
+```
+
+```{r}
+str(FINAL.noNA)
+```
+
+```{r}
+all.title <- FINAL.noNA$movie_title
+all <- FINAL.noNA[,c(2:22)]
+```
+
+```{r}
+library(tidyr)
+all$Genre <- paste('genre',all$Genre,sep = '_')
+all$`MPAA Rating` <- paste('mpaa',all$`MPAA Rating`,sep = '_')
+all$`Movie Studio (Distributor)` <- paste('studio',all$`Movie Studio (Distributor)`,sep = '_')
+all$yesGenre <- 1
+all$yesMPAA <- 1
+all$yesStudio <- 1
+all <- spread(all, Genre, yesGenre, fill = 0)
+all <- spread(all, 'MPAA Rating', yesMPAA, fill = 0)
+all <- spread(all, 'Movie Studio (Distributor)', yesStudio, fill = 0)
+str(all)
+```
+```{r}
+all <- all[,c(1:29,31:35,37:86)] #remove overrepresentation (genre_Western,mpaa_R,studio_Weinstein/Dimension;; when all dummyvariables for genre, mpaa, and studio == 0)
+names(all)
+```
+```{r}
+nrow(all)
+length(all.title)
+```
+
+```{r}
+all <- all[,c(1:14,18:84)]
+```
+
+```{r}
+names(all)
+```
+
+
+```{r}
+all$LDLRatio <- all$countLikes/(all$countLikes + all$countDislikes)
+str(all)
+```
+
+```{r}
+noneg <- all[,c(1:11,15:82)]
+negs <- as.data.frame(all[,c(12,13,14)])
+
+negs <- as.data.frame(lapply(negs,function(x) {(x-min(x))/(max(x)-min(x))}))
+noneg2 <- cbind(noneg,negs)
+str(noneg2)
+all.log <- as.data.frame(log(noneg2+2))
+#hist(all.log$ROI)
+
+quantile(all.log$ROI)
+```
+
+```{r}
+# all.log$ROI_RATING <- "Poor"
+# all.log$ROI_RATING[all.log$ROI >= 0.8430152 && all.log$ROI < 1.2375308] <- "Passing"
+# all.log$ROI_RATING[all.log$ROI >= 1.2375308 && all.log$ROI < 1.6618661] <- "Ok"
+# all.log$ROI_RATING[all.log$ROI >= 1.6618661] <- "Great"
+all.log$ROI_RATING <- cut(all.log$ROI, breaks=c(0, 0.8430152,1.2375308,1.6618661, 6.0696236), labels=c("Poor","Passing","Ok", "Great"))
+all.log$ROI_RATING[all.log$ROI == 0] <- "Poor"
+all.log$ROI_RATING[all.log$ROI > 6.0696236] <- "Great"
+
+str(all.log)
+```
+
+```{r}
+min(all.log$ROI)
+max(all.log$ROI)
+```
+
+
+```{r}
+hist(all.log$ROI)
+quantile(all.log$ROI)
+unique(all.log$ROI_RATING)
+unique(all.log$ROI)
+```
+
+```{r}
+nndata <- cbind(as.data.frame(all.title),all.log)
+str(nndata)
+```
+
+```{r}
+M <- cor(all.log[,c(1:82)], use = "complete.obs")
+```
+
+```{r}
+M
+```
+
+```{r}
+library(psych)
+#unique(FINAL.noNA$Genre)
+#describe(all.scaled)
+
+describe(all.log)
+#pairs.panels(FINAL.noNA)
+```
+
+```{r}
+par(mfrow = c(3,5), mar = c(4,4,2,1), oma = c(1,1,1,1))
+hist(all.log$Bing.Liu.Score, main = 'Bing Liu')
+scatter.smooth(all.log$Bing.Liu.Score,all.log$ROI, ylab = 'ROI')
+scatter.smooth(all.log$Bing.Liu.Score,all.log$`WorldWide Gross`, ylab = 'World Wide Gross')
+scatter.smooth(all.log$Bing.Liu.Score,all.log$`Domestic Gross`, ylab = 'Domestic Gross')
+scatter.smooth(all.log$Bing.Liu.Score,all.log$`International Gross`, ylab = 'Intl Gross')
+hist(all.log$Harvard.Score, main = 'Harvard')
+scatter.smooth(all.log$Harvard.Score,all.log$ROI, ylab = 'ROI')
+scatter.smooth(all.log$Harvard.Score,all.log$`WorldWide Gross`, ylab = 'World Wide Gross')
+scatter.smooth(all.log$Harvard.Score,all.log$`Domestic Gross`, ylab = 'Domestic Gross')
+scatter.smooth(all.log$Harvard.Score,all.log$`International Gross`, ylab = 'Intl Gross')
+hist(all.log$compound, main = 'Vader')
+scatter.smooth(all.log$compound,all.log$ROI, ylab = 'ROI')
+scatter.smooth(all.log$compound,all.log$`WorldWide Gross`, ylab = 'World Wide Gross')
+scatter.smooth(all.log$compound,all.log$`Domestic Gross`, ylab = 'Domestic Gross')
+scatter.smooth(all.log$compound,all.log$`International Gross`, ylab = 'Intl Gross')
+title('Sentiment vs Target Variables', outer=TRUE)
+```
+
+```{r}
+plot(scale(all.log$Bing.Liu.Score), type = 'o', col = 'red', xlab = 'Movies', ylab = 'sentiment', main = 'Sentiment Performance of 3 Models', pch = 0)
+lines(scale(all.log$Harvard.Score), type = 'o', col = 'blue', pch =8)
+lines(scale(all.log$compound), type = 'o', col = 'green', pch = 2)
+```
+
+```{r}
+names(all.log)
+```
+
+```{r}
+studio_analysis <- cbind(FINAL.noNA$`Movie Studio (Distributor)`,as.data.frame(FINAL.noNA[,c(16:18)]))
+genre_analysis <- cbind(FINAL.noNA$Genre,as.data.frame(FINAL.noNA[,c(16:18)]))
+colnames(studio_analysis) <- c('MovieStudio','BLS_scaled','H_scaled','Vader_scaled')
+colnames(genre_analysis) <- c('Genre','BLS_scaled','H_scaled','Vader_scaled')
+class(studio_analysis)
+```
+
+```{r}
+str(genre_analysis)
+```
+
+```{r}
+studio_analysis['BLS_Sentiment'] <- 'POSITIVE'
+studio_analysis$'BLS_Sentiment'[studio_analysis$BLS_scaled == 0] <- 'NEUTRAL'
+studio_analysis$'BLS_Sentiment'[studio_analysis$BLS_scaled < 0] <- 'NEGATIVE'
+studio_analysis['H_Sentiment'] <- 'POSITIVE'
+studio_analysis$'H_Sentiment'[studio_analysis$H_scaled == 0] <- 'NEUTRAL'
+studio_analysis$'H_Sentiment'[studio_analysis$H_scaled < 0] <- 'NEGATIVE'
+studio_analysis['Vader_Sentiment'] <- 'POSITIVE'
+studio_analysis$'Vader_Sentiment'[studio_analysis$Vader_scaled == 0] <- 'NEUTRAL'
+studio_analysis$'Vader_Sentiment'[studio_analysis$Vader_scaled < 0] <- 'NEGATIVE'
+
+genre_analysis['BLS_Sentiment'] <- 'POSITIVE'
+genre_analysis$'BLS_Sentiment'[studio_analysis$BLS_scaled == 0] <- 'NEUTRAL'
+genre_analysis$'BLS_Sentiment'[studio_analysis$BLS_scaled < 0] <- 'NEGATIVE'
+genre_analysis['H_Sentiment'] <- 'POSITIVE'
+genre_analysis$'H_Sentiment'[studio_analysis$H_scaled == 0] <- 'NEUTRAL'
+genre_analysis$'H_Sentiment'[studio_analysis$H_scaled < 0] <- 'NEGATIVE'
+genre_analysis['Vader_Sentiment'] <- 'POSITIVE'
+genre_analysis$'Vader_Sentiment'[studio_analysis$Vader_scaled == 0] <- 'NEUTRAL'
+genre_analysis$'Vader_Sentiment'[studio_analysis$Vader_scaled < 0] <- 'NEGATIVE'
+
+str(studio_analysis)
+```
+```{r}
+studio_analysis_noNA <- na.omit(studio_analysis)
+genre_analysis_noNA <- na.omit(genre_analysis)
+str(genre_analysis_noNA)
+```
+
+```{r}
+library(tidyr)
+library(dplyr)
+```
+
+```{r}
+new <- studio_analysis_noNA[,c(1,2,5)]
+newH <- studio_analysis_noNA[,c(1,3,6)]
+newV <- studio_analysis_noNA[,c(1,4,7)]
+new <- new[order(new$BLS_scaled),]
+newH <- newH[order(newH$H_scaled),]
+newV <- newV[order(newV$Vader_scaled),]
+new <- new[!(is.na(new$MovieStudio) | new$MovieStudio == ''),]
+newH <- newH[!(is.na(newH$MovieStudio) | newH$MovieStudio == ''),]
+newV <- newV[!(is.na(newV$MovieStudio) | newV$MovieStudio == ''),]
+
+gnew <- genre_analysis_noNA[,c(1,2,5)]
+gnewH <- genre_analysis_noNA[,c(1,3,6)]
+gnewV <- genre_analysis_noNA[,c(1,4,7)]
+gnew <- gnew[order(gnew$BLS_scaled),]
+gnewH <- gnewH[order(gnewH$H_scaled),]
+gnewV <- gnewV[order(gnewV$Vader_scaled),]
+gnew <- gnew[!(is.na(gnew$Genre) | gnew$Genre == ''),]
+gnewH <- gnewH[!(is.na(gnewH$Genre) | gnewH$Genre == ''),]
+gnewV <- gnewV[!(is.na(gnewV$Genre) | gnewV$Genre == ''),]
+head(gnew)
+```
+
+```{r}
+new2 <- new %>% group_by(MovieStudio) %>% summarise(average_score = mean(BLS_scaled))
+new2 <- as.data.frame(new2)
+newH2 <- newH %>% group_by(MovieStudio) %>% summarise(average_score = mean(H_scaled))
+newH2 <- as.data.frame(newH2)
+newV2 <- newV %>% group_by(MovieStudio) %>% summarise(average_score = mean(Vader_scaled))
+newV2 <- as.data.frame(newV2)
+new2['BLS_Sentiment'] <- 'POSITIVE'
+new2$'BLS_Sentiment'[new2$average_score == 0] <- 'NEUTRAL'
+new2$'BLS_Sentiment'[new2$average_score < 0] <- 'NEGATIVE'
+newH2['H_Sentiment'] <- 'POSITIVE'
+newH2$'H_Sentiment'[newH2$average_score == 0] <- 'NEUTRAL'
+newH2$'H_Sentiment'[newH2$average_score < 0] <- 'NEGATIVE'
+newV2['V_Sentiment'] <- 'POSITIVE'
+newV2$'V_Sentiment'[newV2$average_score == 0] <- 'NEUTRAL'
+newV2$'V_Sentiment'[newV2$average_score < 0] <- 'NEGATIVE'
+
+gnew2 <- gnew %>% group_by(Genre) %>% summarise(average_score = mean(BLS_scaled))
+gnew2 <- as.data.frame(gnew2)
+gnewH2 <- gnewH %>% group_by(Genre) %>% summarise(average_score = mean(H_scaled))
+gnewH2 <- as.data.frame(gnewH2)
+gnewV2 <- gnewV %>% group_by(Genre) %>% summarise(average_score = mean(Vader_scaled))
+gnewV2 <- as.data.frame(gnewV2)
+gnew2['BLS_Sentiment'] <- 'POSITIVE'
+gnew2$'BLS_Sentiment'[gnew2$average_score == 0] <- 'NEUTRAL'
+gnew2$'BLS_Sentiment'[gnew2$average_score < 0] <- 'NEGATIVE'
+gnewH2['H_Sentiment'] <- 'POSITIVE'
+gnewH2$'H_Sentiment'[gnewH2$average_score == 0] <- 'NEUTRAL'
+gnewH2$'H_Sentiment'[gnewH2$average_score < 0] <- 'NEGATIVE'
+gnewV2['V_Sentiment'] <- 'POSITIVE'
+gnewV2$'V_Sentiment'[gnewV2$average_score == 0] <- 'NEUTRAL'
+gnewV2$'V_Sentiment'[gnewV2$average_score < 0] <- 'NEGATIVE'
+
+```
+
+```{r}
+nrow(new2)
+nrow(newH2)
+nrow(newV2)
+```
+
+```{r}
+#ggplot(data = new2, aes(x = MovieStudio, y = score),fill = BLS_Sentiment, colour = BLS_Sentiment) + #geom_bar(aes(fill=BLS_Sentiment)) + coord_flip()
+library(ggplot2)
+require(gridExtra)
+plot1 <- ggplot(data = new2, aes(x = reorder(MovieStudio,average_score), y = average_score, fill = BLS_Sentiment)) + coord_flip() + geom_bar(stat = 'identity')+ scale_x_discrete(labels = abbreviate) + ggtitle("Average Sentiment per Studio - Bing Liu") + labs(x = "Movie Studios", y = "Ave. Sentiment Scores")
+plot2 <- ggplot(data = newH2, aes(x = reorder(MovieStudio,average_score), y = average_score, fill = H_Sentiment)) + coord_flip() + geom_bar(stat = 'identity')+ scale_x_discrete(labels = abbreviate) + ggtitle("Average Sentiment per Studio - Harvard") + labs(x = "Movie Studios", y = "Ave. Sentiment Scores")
+plot3 <- ggplot(data = newV2, aes(x = reorder(MovieStudio,average_score), y = average_score, fill = V_Sentiment)) + coord_flip() + geom_bar(stat = 'identity')+ scale_x_discrete(labels = abbreviate) + ggtitle("Average Sentiment per Studio - Vader") + labs(x = "Movie Studios", y = "Ave. Sentiment Scores")
+#grid.arrange(plot1,plot2,plot3)
+
+gplot1 <- ggplot(data = gnew2, aes(x = reorder(Genre,average_score), y = average_score, fill = BLS_Sentiment)) + coord_flip() + geom_bar(stat = 'identity')+ scale_x_discrete(labels = abbreviate) + ggtitle("Average Sentiment per Genre - Bing Liu") + labs(x = "Movie Studios", y = "Ave. Sentiment Scores")
+gplot2 <- ggplot(data = gnewH2, aes(x = reorder(Genre,average_score), y = average_score, fill = H_Sentiment)) + coord_flip() + geom_bar(stat = 'identity')+ scale_x_discrete(labels = abbreviate) + ggtitle("Average Sentiment per Genre - Harvard") + labs(x = "Movie Studios", y = "Ave. Sentiment Scores")
+gplot3 <- ggplot(data = gnewV2, aes(x = reorder(Genre,average_score), y = average_score, fill = V_Sentiment)) + coord_flip() + geom_bar(stat = 'identity')+ scale_x_discrete(labels = abbreviate) + ggtitle("Average Sentiment per Genre - Vader") + labs(x = "Movie Studios", y = "Ave. Sentiment Scores")
+#grid.arrange(gplot1,gplot2,gplot3)
+plot1
+plot2
+plot3
+gplot1
+gplot2
+gplot3
+```
+
+```{r}
+str(new2)
+new2 <- new2[order(new2$average_score),]
+new3<- new2[c(1:10,41:50),]
+newH2 <- newH2[order(newH2$average_score),]
+newH3<- newH2[c(1:10,41:50),]
+newV2 <- newV2[order(newV2$average_score),]
+newV3<- newV2[c(1:10,41:50),]
+
+gnew2 <- gnew2[order(gnew2$average_score),]
+gnew3<- gnew2[c(1:3,10:12),]
+gnewH2 <- gnewH2[order(gnewH2$average_score),]
+gnewH3<- gnewH2[c(1:3,10:12),]
+gnewV2 <- gnewV2[order(gnewV2$average_score),]
+gnewV3<- gnewV2[c(1:3,10:12),]
+```
+
+```{r}
+new3
+```
+
+```{r}
+top1 <- ggplot(data = new3, aes(x = reorder(MovieStudio,average_score), y = average_score, fill = BLS_Sentiment)) + coord_flip() + geom_bar(stat = 'identity') + ggtitle("Top/Bottom 10 - Average Sentiment per Studio - Bing Liu")+ labs(x = "Movie Studios", y = "Ave. Sentiment Scores")
+top2 <- ggplot(data = newH3, aes(x = reorder(MovieStudio,average_score), y = average_score, fill = H_Sentiment)) + coord_flip() + geom_bar(stat = 'identity') + ggtitle("Top/Bottom 10 - Average Sentiment per Studio - Harvard")+ labs(x = "Movie Studios", y = "Ave. Sentiment Scores")
+top3 <- ggplot(data = newV3, aes(x = reorder(MovieStudio,average_score), y = average_score, fill = V_Sentiment)) + coord_flip() + geom_bar(stat = 'identity') + ggtitle("Top/Bottom 10 - Average Sentiment per Studio - Vader")+ labs(x = "Movie Studios", y = "Ave. Sentiment Scores")
+#grid.arrange(top1,top2,top3)
+
+gtop1 <- ggplot(data = gnew3, aes(x = reorder(Genre,average_score), y = average_score, fill = BLS_Sentiment)) + coord_flip() + geom_bar(stat = 'identity') + ggtitle("Top/Bottom 3 - Average Sentiment per Studio - Bing Liu")+ labs(x = "Movie Studios", y = "Ave. Sentiment Scores")
+gtop2 <- ggplot(data = gnewH3, aes(x = reorder(Genre,average_score), y = average_score, fill = H_Sentiment)) + coord_flip() + geom_bar(stat = 'identity') + ggtitle("Top/Bottom 3 - Average Sentiment per Studio - Harvard")+ labs(x = "Movie Studios", y = "Ave. Sentiment Scores")
+gtop3 <- ggplot(data = gnewV3, aes(x = reorder(Genre,average_score), y = average_score, fill = V_Sentiment)) + coord_flip() + geom_bar(stat = 'identity') + ggtitle("Top/Bottom 3 - Average Sentiment per Studio - Vader")+ labs(x = "Movie Studios", y = "Ave. Sentiment Scores")
+top1
+top2
+top3
+gtop1
+gtop2
+gtop3
+#grid.arrange(gtop1,gtop2,gtop3)
+```
+
+
+
+```{r}
+write.csv(nndata, file = 'neuralnetinput.csv', na = "NA", row.names = FALSE)
+```
+
+
+```{r}
+
+all.test <- all
+all.test$BL_scaled <- ifelse(all$`Bing Liu Score` == 0, 0, ifelse(all$`Bing Liu Score` > 0, all$`Bing Liu Score`/max(all$`Bing Liu Score`), -1*all$`Bing Liu Score`/min(all$`Bing Liu Score`)))
+all.test$H_scaled <- ifelse(all$`Harvard Score` == 0, 0, ifelse(all$`Bing Liu Score` > 0, all$`Harvard Score`/max(all$`Harvard Score`), -1*all$`Harvard Score`/min(all$`Harvard Score`)))
+all.test$V_scaled <- ifelse(all$compound == 0, 0, ifelse(all$compound > 0, all$compound/max(all$compound), -1*all$compound/min(all$compound)))
+
+str(all.test)
+```
+
+
+```{r}
+par(mfrow = c(2,3))
+hist(all.test$BL_scaled, main = 'Bing Liu')
+scatter.smooth(all.log$Bing.Liu.Score,all.log$ROI, ylab = 'ROI')
+scatter.smooth(all.log$Bing.Liu.Score,all.log$`WorldWide Gross`, ylab = 'World Wide Gross')
+hist(all.test$H_scaled, main = 'Harvard')
+scatter.smooth(all.log$Harvard.Score,all.log$ROI, ylab = 'ROI')
+scatter.smooth(all.log$Harvard.Score,all.log$`WorldWide Gross`, ylab = 'World Wide Gross')
+hist(all.test$V_scaled, main = 'Vader')
+scatter.smooth(all.log$compound,all.log$ROI, ylab = 'ROI')
+scatter.smooth(all.log$compound,all.log$`WorldWide Gross`, ylab = 'World Wide Gross')
+title('Sentiment vs Target Variables', outer=TRUE)
+```
+
