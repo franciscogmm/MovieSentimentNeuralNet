@@ -5,6 +5,8 @@ This was submitted as a project for my Big Data Analytics class in my MS Busines
 
 Due to policies of thenumbers.com regarding their data, that particular data set won’t be uploaded.
 
+Also, I'm only uploading my code.
+
 ## Problem Statement
 The purpose of this study is to determine if there is a correlation between the performance of trailers on YouTube and Hollywood movie sales.
 
