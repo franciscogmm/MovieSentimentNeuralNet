@@ -7,6 +7,8 @@ Due to policies of thenumbers.com regarding their data, that particular data set
 
 Also, I'm only uploading my code.
 
+### Check this link out for the neural network that I optimized using genetic algorithms: https://github.com/franciscogmm/ImprovingNeuralNetsWithGeneticAlgorithms
+
 ## Problem Statement
 The purpose of this study is to determine if there is a correlation between the performance of trailers on YouTube and Hollywood movie sales.
 
